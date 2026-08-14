@@ -15,6 +15,7 @@ import {
   Loader2,
   User,
   Film,
+  Calendar,
 } from 'lucide-react'
 import type { Playlist } from '@/types/playlist'
 
@@ -43,6 +44,12 @@ const TAG_COLORS = [
   'bg-violet-500/20 text-violet-300',
   'bg-pink-500/20 text-pink-300',
 ]
+
+function formatDate(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 export default function PlaylistDetailPage() {
   const params = useParams()
@@ -208,7 +215,7 @@ export default function PlaylistDetailPage() {
       <div className="mb-8 rounded-xl border border-gray-800 bg-gray-900/60 p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold text-white sm:text-3xl">{playlist.title}</h1>
               {playlist.isPublic ? (
                 <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -219,6 +226,10 @@ export default function PlaylistDetailPage() {
                   <Lock className="size-4" /> 私密
                 </span>
               )}
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Calendar className="size-3.5" />
+                创建于 {formatDate(playlist.createdAt)}
+              </span>
             </div>
 
             {playlist.description && (

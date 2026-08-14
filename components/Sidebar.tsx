@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import {
   Clapperboard,
@@ -15,6 +15,7 @@ import {
   MessagesSquare,
   Newspaper,
   Shield,
+  User,
   UserPlus,
   ChevronDown,
   Plus,
@@ -27,19 +28,29 @@ type NavItem = {
   label: string
   href: string
   icon: React.ComponentType<{ className?: string }>
+  /** 是否为「我的片单」项（带展开子列表） */
+  expandable?: boolean
+  /** 是否仅管理员可见 */
+  adminOnly?: boolean
 }
 
-const navItems: NavItem[] = [
+const browseItems: NavItem[] = [
   { label: '首页', href: '/', icon: Home },
   { label: '发现', href: '/discover', icon: Compass },
-  { label: '我的片单', href: '/playlists/my', icon: ListVideo },
   { label: '片单广场', href: '/playlists/explore', icon: Library },
   { label: '论坛', href: '/forum', icon: MessagesSquare },
   { label: '资讯', href: '/news', icon: Newspaper },
 ]
 
+const personalItems: NavItem[] = [
+  { label: '我的片单', href: '/playlists/my', icon: ListVideo, expandable: true },
+  { label: '个人主页', href: '/profile', icon: User },
+  { label: '评分管理', href: '/admin/ratings', icon: Shield, adminOnly: true },
+]
+
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { data: session, status } = useSession()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [playlistsOpen, setPlaylistsOpen] = useState(false)
@@ -60,6 +71,90 @@ export function Sidebar() {
       })
       .catch(() => {})
   }, [status])
+
+  async function handleSignOut() {
+    // 使用 redirect:false 避免 next-auth 重定向导致的 404，手动跳转首页
+    await signOut({ redirect: false })
+    router.push('/')
+    router.refresh()
+  }
+
+  function renderNavItem(item: NavItem) {
+    const active = pathname === item.href
+    const Icon = item.icon
+
+    return (
+      <div key={item.href}>
+        <div className="group relative flex items-center">
+          <Link
+            href={item.href}
+            onClick={() => setMobileOpen(false)}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+              active
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
+            )}
+          >
+            <Icon className="size-[18px] shrink-0" />
+            <span className="truncate">{item.label}</span>
+            {active && (
+              <span className="bg-primary ml-auto h-4 w-1 rounded-full" aria-hidden="true" />
+            )}
+          </Link>
+
+          {/* 「我的片单」展开按钮 */}
+          {item.expandable && isLoggedIn && (
+            <button
+              type="button"
+              onClick={() => setPlaylistsOpen((v) => !v)}
+              className="text-muted-foreground hover:text-sidebar-foreground absolute right-1 rounded p-1"
+              aria-label="展开我的片单"
+            >
+              <ChevronDown
+                className={cn('size-4 transition-transform', playlistsOpen && 'rotate-180')}
+              />
+            </button>
+          )}
+        </div>
+
+        {/* 展开的片单列表 */}
+        {item.expandable && isLoggedIn && playlistsOpen && (
+          <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-sidebar-border pl-2">
+            {playlists.length === 0 ? (
+              <p className="px-2 py-1 text-xs text-gray-500">暂无片单</p>
+            ) : (
+              playlists.map((p) => (
+                <Link
+                  key={p._id}
+                  href={`/playlists/${p._id}`}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    'truncate rounded-md px-2 py-1 text-xs transition-colors',
+                    pathname === `/playlists/${p._id}`
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                  )}
+                >
+                  {p.isPublic ? '' : '🔒 '}
+                  {p.title}
+                </Link>
+              ))
+            )}
+            <Link
+              href="/playlists/my"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-yellow-400 hover:bg-sidebar-accent"
+            >
+              <Plus className="size-3" />
+              新建片单
+            </Link>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <>
@@ -117,111 +212,19 @@ export function Sidebar() {
 
         {/* 导航菜单 */}
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+          {/* 浏览 */}
           <p className="text-muted-foreground px-3 pt-2 pb-1 text-[11px] font-medium tracking-widest uppercase">
             浏览
           </p>
-          {navItems.map((item) => {
-            const active = pathname === item.href
-            const Icon = item.icon
-            const isPlaylistItem = item.href === '/playlists/my'
+          {browseItems.map(renderNavItem)}
 
-            return (
-              <div key={item.href}>
-                <div className="group relative flex items-center">
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      'flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                      active
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                        : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
-                    )}
-                  >
-                    <Icon className="size-[18px] shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                    {active && (
-                      <span className="bg-primary ml-auto h-4 w-1 rounded-full" aria-hidden="true" />
-                    )}
-                  </Link>
-
-                  {/* 「我的片单」展开按钮 */}
-                  {isPlaylistItem && isLoggedIn && (
-                    <button
-                      type="button"
-                      onClick={() => setPlaylistsOpen((v) => !v)}
-                      className="text-muted-foreground hover:text-sidebar-foreground absolute right-1 rounded p-1"
-                      aria-label="展开我的片单"
-                    >
-                      <ChevronDown
-                        className={cn(
-                          'size-4 transition-transform',
-                          playlistsOpen && 'rotate-180',
-                        )}
-                      />
-                    </button>
-                  )}
-                </div>
-
-                {/* 展开的片单列表 */}
-                {isPlaylistItem && isLoggedIn && playlistsOpen && (
-                  <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-sidebar-border pl-2">
-                    {playlists.length === 0 ? (
-                      <p className="px-2 py-1 text-xs text-gray-500">暂无片单</p>
-                    ) : (
-                      playlists.map((p) => (
-                        <Link
-                          key={p._id}
-                          href={`/playlists/${p._id}`}
-                          onClick={() => setMobileOpen(false)}
-                          className={cn(
-                            'truncate rounded-md px-2 py-1 text-xs transition-colors',
-                            pathname === `/playlists/${p._id}`
-                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                              : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
-                          )}
-                        >
-                          {p.isPublic ? '' : '🔒 '}
-                          {p.title}
-                        </Link>
-                      ))
-                    )}
-                    <Link
-                      href="/playlists/my"
-                      onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-yellow-400 hover:bg-sidebar-accent"
-                    >
-                      <Plus className="size-3" />
-                      新建片单
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-
-          {/* 管理员导航 */}
-          {isAdmin && (
-            <>
-              <p className="text-muted-foreground px-3 pt-4 pb-1 text-[11px] font-medium tracking-widest uppercase">
-                管理
-              </p>
-              <Link
-                href="/admin/ratings"
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  pathname === '/admin/ratings'
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
-                )}
-              >
-                <Shield className="size-[18px] shrink-0" />
-                <span className="truncate">评分管理</span>
-              </Link>
-            </>
-          )}
+          {/* 个人 */}
+          <p className="text-muted-foreground mt-4 border-t border-sidebar-border px-3 pt-3 pb-1 text-[11px] font-medium tracking-widest uppercase">
+            个人
+          </p>
+          {personalItems
+            .filter((item) => !item.adminOnly || isAdmin)
+            .map(renderNavItem)}
         </nav>
 
         {/* 底部：登录/注册 或 用户信息 */}
@@ -244,7 +247,7 @@ export function Sidebar() {
               </div>
               <button
                 type="button"
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={handleSignOut}
                 className="text-muted-foreground hover:bg-sidebar-accent hover:text-red-400 rounded-md p-2 transition-colors"
                 title="退出登录"
               >

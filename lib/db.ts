@@ -9,13 +9,14 @@ if (!MONGODB_URI) {
 
 /**
  * 部分网络环境下系统 DNS 服务器无法解析 MongoDB Atlas 的 SRV 记录
- * （报错 querySrv ECONNREFUSED），这里强制切换到公共 DNS 以确保连接稳定。
+ * （报错 querySrv ECONNREFUSED）。每次连接前强制切换到公共 DNS。
+ * 不缓存标志，确保在 Next.js 的每个 worker 线程中都生效。
  */
-let dnsConfigured = false
 function ensureDnsResolvable() {
-  if (!dnsConfigured) {
+  try {
     dns.setServers(['8.8.8.8', '1.1.1.1'])
-    dnsConfigured = true
+  } catch (err) {
+    console.error('dns.setServers 失败:', err instanceof Error ? err.message : err)
   }
 }
 

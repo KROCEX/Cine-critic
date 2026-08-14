@@ -132,22 +132,16 @@ export default function MyPlaylistsPage() {
                 <>
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openEdit(p)
-                    }}
-                    className="flex items-center gap-1 rounded-md bg-gray-800/90 px-2 py-1 text-xs text-white hover:bg-gray-700"
+                    onClick={() => openEdit(p)}
+                    className="flex flex-1 items-center justify-center gap-1 rounded-md bg-gray-800 px-2 py-1.5 text-xs text-white hover:bg-gray-700"
                   >
                     <Pencil className="size-3" />
                     编辑
                   </button>
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDelete(p)
-                    }}
-                    className="flex items-center gap-1 rounded-md bg-red-900/80 px-2 py-1 text-xs text-red-200 hover:bg-red-800"
+                    onClick={() => handleDelete(p)}
+                    className="flex flex-1 items-center justify-center gap-1 rounded-md bg-red-900/60 px-2 py-1.5 text-xs text-red-200 hover:bg-red-800"
                   >
                     <Trash2 className="size-3" />
                     删除

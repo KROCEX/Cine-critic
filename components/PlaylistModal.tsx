@@ -23,6 +23,8 @@ export function PlaylistModal({ open, playlist, onClose, onSaved }: PlaylistModa
   const [saving, setSaving] = useState(false)
 
   const isEdit = !!playlist
+  // 公开片单不可改回私密（编辑已公开的片单时禁用开关）
+  const isPublicLocked = isEdit && playlist?.isPublic === true
 
   // 打开时初始化表单
   useEffect(() => {
@@ -186,19 +188,32 @@ export function PlaylistModal({ open, playlist, onClose, onSaved }: PlaylistModa
 
           {/* 公开/私密切换 */}
           <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-400">公开片单</label>
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-400">公开片单</label>
+              {isPublicLocked && (
+                <span className="text-[11px] text-amber-400/80">
+                  公开片单不可改回私密
+                </span>
+              )}
+            </div>
             <button
               type="button"
               role="switch"
               aria-checked={isPublic}
+              disabled={isPublicLocked}
               onClick={() => setIsPublic((v) => !v)}
-              className={`relative h-6 w-11 rounded-full transition-colors ${
-                isPublic ? 'bg-yellow-500' : 'bg-gray-700'
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                isPublicLocked
+                  ? 'cursor-not-allowed bg-yellow-500/60'
+                  : isPublic
+                    ? 'bg-yellow-500'
+                    : 'bg-gray-700'
               }`}
             >
+              {/* 圆点：left 固定 + translate 控制，始终在底座范围内 */}
               <span
-                className={`absolute top-0.5 size-5 rounded-full bg-white transition-transform ${
-                  isPublic ? 'translate-x-5' : 'translate-x-0.5'
+                className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform ${
+                  isPublic ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
             </button>

@@ -14,6 +14,16 @@ export interface SerializedPlaylist {
   updatedAt: string
 }
 
+/** 提取对象 ID（兼容 ObjectId、字符串、以及 populate 后的文档对象） */
+function extractId(value: unknown): string {
+  if (value == null) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'object' && '_id' in value) {
+    return String((value as { _id: unknown })._id)
+  }
+  return String(value)
+}
+
 /**
  * 将 Mongoose 文档（或 lean 对象）序列化为可安全 JSON 输出的纯对象。
  */
@@ -30,8 +40,8 @@ export function serializePlaylist(doc: {
   updatedAt?: Date | string
 }): SerializedPlaylist {
   return {
-    _id: String(doc._id),
-    userId: String(doc.userId),
+    _id: extractId(doc._id),
+    userId: extractId(doc.userId),
     title: doc.title,
     description: doc.description ?? '',
     tags: doc.tags ?? [],

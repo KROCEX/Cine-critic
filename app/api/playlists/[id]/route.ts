@@ -76,6 +76,14 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ success: false, error: '无权限修改该片单' }, { status: 403 })
     }
 
+    // 公开片单不可改回私密
+    if (isPublic != null && playlist.isPublic === true && isPublic === false) {
+      return NextResponse.json(
+        { success: false, error: '公开片单不可改回私密' },
+        { status: 400 }
+      )
+    }
+
     if (title != null) playlist.title = title.trim()
     if (description != null) playlist.description = description.trim()
     if (tags != null) {

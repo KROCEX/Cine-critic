@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import Playlist from '@/models/Playlist'
+// 副作用导入：注册 User 模型供 populate 使用（避免 tree-shaking 移除）
+import '@/models/User'
 import { serializePlaylist } from '@/lib/playlist-serialize'
 
 export async function GET(request: Request) {

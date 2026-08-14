@@ -11,7 +11,7 @@ type PlaylistCardProps = {
   showCreator?: boolean
   /** 是否显示收藏数（公开片单用） */
   showLikes?: boolean
-  /** 底部操作按钮（我的片单页用） */
+  /** 底部操作按钮（我的片单页用，仅创建者传入） */
   actions?: ReactNode
 }
 
@@ -24,19 +24,11 @@ const TAG_COLORS = [
   'bg-pink-500/20 text-pink-300',
 ]
 
-function formatDate(iso: string): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 export function PlaylistCard({ playlist, showCreator, showLikes, actions }: PlaylistCardProps) {
   return (
-    <div className="group relative">
-      <Link
-        href={`/playlists/${playlist._id}`}
-        className="block rounded-xl border border-gray-800 bg-gray-900/60 transition-all duration-300 hover:-translate-y-1 hover:border-yellow-500/40 hover:shadow-lg hover:shadow-yellow-500/10"
-      >
+    <div className="flex flex-col overflow-hidden rounded-xl border border-gray-800 bg-gray-900/60 transition-all duration-300 hover:-translate-y-1 hover:border-yellow-500/40 hover:shadow-lg hover:shadow-yellow-500/10">
+      {/* 卡片主体（点击进入详情） */}
+      <Link href={`/playlists/${playlist._id}`} className="block flex-1">
         <div className="flex flex-col gap-3 p-4">
           {/* 标题 + 公开状态 */}
           <div className="flex items-start justify-between gap-2">
@@ -88,21 +80,14 @@ export function PlaylistCard({ playlist, showCreator, showLikes, actions }: Play
                 <User className="size-3.5" />
                 {playlist.creator.name}
               </span>
-            ) : (
-              <span>{formatDate(playlist.createdAt)}</span>
-            )}
+            ) : null}
           </div>
         </div>
       </Link>
 
-      {/* 操作按钮（悬浮在卡片上方，阻止冒泡避免触发导航） */}
+      {/* 底部操作按钮（常驻，仅创建者可见） */}
       {actions && (
-        <div
-          className="absolute right-2 bottom-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
-          onClick={(e) => e.preventDefault()}
-        >
-          {actions}
-        </div>
+        <div className="flex gap-2 border-t border-gray-800 p-2">{actions}</div>
       )}
     </div>
   )
