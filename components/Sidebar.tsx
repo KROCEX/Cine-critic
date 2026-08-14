@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -16,8 +16,12 @@ import {
   Newspaper,
   Shield,
   UserPlus,
+  ChevronDown,
+  Plus,
+  Library,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { Playlist } from '@/types/playlist'
 
 type NavItem = {
   label: string
@@ -28,7 +32,8 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: '首页', href: '/', icon: Home },
   { label: '发现', href: '/discover', icon: Compass },
-  { label: '我的片单', href: '/collections', icon: ListVideo },
+  { label: '我的片单', href: '/playlists/my', icon: ListVideo },
+  { label: '片单广场', href: '/playlists/explore', icon: Library },
   { label: '论坛', href: '/forum', icon: MessagesSquare },
   { label: '资讯', href: '/news', icon: Newspaper },
 ]
@@ -37,13 +42,24 @@ export function Sidebar() {
   const pathname = usePathname()
   const { data: session, status } = useSession()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [playlistsOpen, setPlaylistsOpen] = useState(false)
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
 
   const isLoggedIn = status === 'authenticated' && !!session?.user
   const isAdmin = session?.user?.role === 'admin'
 
-  const userInitials = session?.user?.name
-    ? session.user.name.slice(0, 2)
-    : '?'
+  const userInitials = session?.user?.name ? session.user.name.slice(0, 2) : '?'
+
+  // 登录后加载我的片单列表
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    fetch('/api/playlists/my')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setPlaylists(data.data)
+      })
+      .catch(() => {})
+  }, [status])
 
   return (
     <>
@@ -107,25 +123,81 @@ export function Sidebar() {
           {navItems.map((item) => {
             const active = pathname === item.href
             const Icon = item.icon
+            const isPlaylistItem = item.href === '/playlists/my'
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  active
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
+              <div key={item.href}>
+                <div className="group relative flex items-center">
+                  <Link
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                      active
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                        : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                    )}
+                  >
+                    <Icon className="size-[18px] shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                    {active && (
+                      <span className="bg-primary ml-auto h-4 w-1 rounded-full" aria-hidden="true" />
+                    )}
+                  </Link>
+
+                  {/* 「我的片单」展开按钮 */}
+                  {isPlaylistItem && isLoggedIn && (
+                    <button
+                      type="button"
+                      onClick={() => setPlaylistsOpen((v) => !v)}
+                      className="text-muted-foreground hover:text-sidebar-foreground absolute right-1 rounded p-1"
+                      aria-label="展开我的片单"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          'size-4 transition-transform',
+                          playlistsOpen && 'rotate-180',
+                        )}
+                      />
+                    </button>
+                  )}
+                </div>
+
+                {/* 展开的片单列表 */}
+                {isPlaylistItem && isLoggedIn && playlistsOpen && (
+                  <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-sidebar-border pl-2">
+                    {playlists.length === 0 ? (
+                      <p className="px-2 py-1 text-xs text-gray-500">暂无片单</p>
+                    ) : (
+                      playlists.map((p) => (
+                        <Link
+                          key={p._id}
+                          href={`/playlists/${p._id}`}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            'truncate rounded-md px-2 py-1 text-xs transition-colors',
+                            pathname === `/playlists/${p._id}`
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                              : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                          )}
+                        >
+                          {p.isPublic ? '' : '🔒 '}
+                          {p.title}
+                        </Link>
+                      ))
+                    )}
+                    <Link
+                      href="/playlists/my"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-yellow-400 hover:bg-sidebar-accent"
+                    >
+                      <Plus className="size-3" />
+                      新建片单
+                    </Link>
+                  </div>
                 )}
-              >
-                <Icon className="size-[18px] shrink-0" />
-                <span className="truncate">{item.label}</span>
-                {active && (
-                  <span className="bg-primary ml-auto h-4 w-1 rounded-full" aria-hidden="true" />
-                )}
-              </Link>
+              </div>
             )
           })}
 
